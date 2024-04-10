@@ -11,10 +11,13 @@ class KalmanFilter:
         self.sigma_pred = P0
         self.z_pred = initial_state
 
-    def state_update(self, z):
-        w = np.random.normal(0, np.sqrt(self.Q))
-        z_next = self.A @ z + w * self.G
+    def state_update(self, z, control_input):
+        # Ensure w is a vector with the same number of rows as G has columns
+        w = np.random.normal(0, np.sqrt(self.Q), size=(self.G.shape[1], 1))
+        control_effect = np.array([[0], [control_input]])  # Assuming control affects the velocity
+        z_next = self.A @ z + self.G @ w + control_effect
         return z_next.reshape(-1, 1)
+
 
     def output(self, z):
         v = np.random.normal(0, np.sqrt(self.R))
@@ -58,15 +61,15 @@ A = np.array([[1, t_sampling], [0, 1]])
 G = np.array([[0.5 * t_sampling**2], [t_sampling]])
 C = np.array([[1, 0]])
 P0 = np.array([[100, 0], [0, 10]])
-Q = 8  # variance of process noise
-R = 15  # variance of measurement noise
+Q = 0.001 # variance of process noise
+R = 0.01  # variance of measurement noise
 initial_state = np.array([[0], [0]])
 
 kf = KalmanFilter(A, G, C, Q, R, P0, initial_state)
 
 # Simulation parameters
-desired_altitude = 10  # meters
-kp, ki, kd = 0.5, 0, 0  # PID coefficients
+desired_altitude = 20  # meters
+kp, ki, kd = 5, 0, 0  # PID coefficients
 pid = PIDController(kp, ki, kd, desired_altitude)
 
 # Simulation parameters
@@ -94,8 +97,6 @@ throttle_adjustments = []
 z_actual = np.random.multivariate_normal(initial_state.flatten(), P0).reshape(-1, 1)
 
 for t in time_stamps:
-    # Simulate the altitude measurement
-    z_actual = kf.state_update(z_actual)
     
     # Update Kalman Filter
     y = kf.output(z_actual)
@@ -105,6 +106,9 @@ for t in time_stamps:
     # PID Controller Update
     altitude_estimate = z_corr[0, 0]
     throttle_adjustment = pid.update(altitude_estimate, dt)
+    
+    # Simulate the altitude measurement
+    z_actual = kf.state_update(z_actual, throttle_adjustment)
     
     # Store the results for plotting
     altitude_estimates.append(altitude_estimate)
