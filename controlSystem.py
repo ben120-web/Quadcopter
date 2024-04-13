@@ -61,14 +61,14 @@ A = np.array([[1, t_sampling], [0, 1]])
 G = np.array([[0.5 * t_sampling**2], [t_sampling]])
 C = np.array([[1, 0]])
 P0 = np.array([[100, 0], [0, 10]])
-Q = 0.001 # variance of process noise
-R = 0.01  # variance of measurement noise
+Q = 10 # variance of process noise
+R = 0.01 # variance of measurement noise
 initial_state = np.array([[0], [0]])
 
 kf = KalmanFilter(A, G, C, Q, R, P0, initial_state)
 
 # Simulation parameters
-desired_altitude = 20  # meters
+desired_altitude = 40  # meters
 kp, ki, kd = 5, 0, 0  # PID coefficients
 pid = PIDController(kp, ki, kd, desired_altitude)
 
