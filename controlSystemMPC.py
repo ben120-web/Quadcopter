@@ -94,14 +94,14 @@ class ModelPredictiveControl:
         return xkp1, yk
         
     def computeControlInputs(self, estimated_state):
-        desiredControlTrajectory = self.desired_control_trajectory_total[self.currentTimeStep:self.currentTimeStep+self.f, :]
-
-        # Adjust the shape of estimated_state to match self.O
-        estimated_state = estimated_state.reshape(-1, 1)
+        desiredControlTrajectory = self.desired_control_trajectory_total[self.currentTimeStep:self.currentTimeStep+self.f]
+        desiredControlTrajectory = np.vstack((desiredControlTrajectory, np.zeros((self.f - len(desiredControlTrajectory), 1))))
 
         vectorS = desiredControlTrajectory - np.dot(self.O, estimated_state)
+        
         inputSequenceComputed = np.dot(self.gainMatrix, vectorS)
         inputApplied = inputSequenceComputed[0]
+        
         state_kp1, output_k = self.propagateDynamics(inputApplied, self.states[self.currentTimeStep])
         self.states.append(state_kp1)
         self.outputs.append(output_k)
