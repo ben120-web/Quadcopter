@@ -94,19 +94,32 @@ class ModelPredictiveControl:
         return xkp1, yk
         
     def computeControlInputs(self, estimated_state):
-        desiredControlTrajectory = self.desired_control_trajectory_total[self.currentTimeStep:self.currentTimeStep+self.f]
-        desiredControlTrajectory = np.vstack((desiredControlTrajectory, np.zeros((self.f - len(desiredControlTrajectory), 1))))
+            desiredControlTrajectory = self.desired_control_trajectory_total[self.currentTimeStep:self.currentTimeStep+self.f]
+            desiredControlTrajectory = np.vstack((desiredControlTrajectory, np.zeros((self.f - len(desiredControlTrajectory), 1))))
 
-        vectorS = desiredControlTrajectory - np.dot(self.O, estimated_state)
-        
-        inputSequenceComputed = np.dot(self.gainMatrix, vectorS)
-        inputApplied = inputSequenceComputed[0]
-        
-        state_kp1, output_k = self.propagateDynamics(inputApplied, self.states[self.currentTimeStep])
-        self.states.append(state_kp1)
-        self.outputs.append(output_k)
-        self.inputs.append(inputApplied)
-        self.currentTimeStep += 1
+            vectorS = desiredControlTrajectory - np.dot(self.O, estimated_state)
+
+            # Calculate the deviation between estimated altitude and desired altitude
+            altitude_deviation = estimated_state[0] - desiredControlTrajectory[0]
+
+            # Adjust control inputs based on altitude deviation
+            if abs(altitude_deviation) > 2:
+                # If the deviation is greater than 2 meters, adjust the control input
+                sign = np.sign(altitude_deviation)
+                inputSequenceComputed = np.dot(self.gainMatrix, vectorS) - sign * 2  # Adjust control input
+            else:
+                inputSequenceComputed = np.dot(self.gainMatrix, vectorS)
+            
+            inputApplied = inputSequenceComputed[0]
+            
+            # Propagate dynamics using the computed control input
+            state_kp1, output_k = self.propagateDynamics(inputApplied, self.states[self.currentTimeStep])
+            
+            # Update states, outputs, and inputs
+            self.states.append(state_kp1)
+            self.outputs.append(output_k)
+            self.inputs.append(inputApplied)
+            self.currentTimeStep += 1
 
 # Define system matrices and initial conditions
 t_sampling = 0.1
@@ -120,7 +133,7 @@ initial_state = np.array([[0], [0]])
 
 # Simulation parameters
 desired_altitude = 40  # meters
-f = 10  # Prediction horizon
+f = 50  # Prediction horizon
 v = 3  # Control horizon
 W3 = np.eye(3) * 0.1  # Initialize W3 as a 3x3 identity matrix with a scaling factor
 desired_control_trajectory_total = np.random.randn(f, 1)
